@@ -21,11 +21,17 @@ def printstr(str): # print without newline
 def shell(cmdline): # execute shell commands (unicode support)
     call(cmdline, shell=True)
 
-def rip_init(session, track):
+def already_ripped(track, basedir):
+    mp3file = track.name() + ".mp3"
+    directory = basedir + "/" + track.artists()[0].name() + "/" + track.album().name() + "/"
+    # check if the file already exists and return the answer
+    return os.path.exists(directory + mp3file)
+
+def rip_init(session, track, basedir):
     global pipe, ripping
     num_track = "%02d" % (track.index(),)
-    mp3file = track.name()+".mp3"
-    directory = os.getcwd() + "/" + track.artists()[0].name() + "/" + track.album().name() + "/"
+    mp3file = track.name() + ".mp3"
+    directory = basedir + "/" + track.artists()[0].name() + "/" + track.album().name() + "/"
     if not os.path.exists(directory):
         os.makedirs(directory)
     printstr("ripping " + mp3file + " ...")
@@ -45,14 +51,14 @@ def rip(session, frames, frame_size, num_frames, sample_type, sample_rate, chann
         printstr('.')
         pipe.write(frames);
 
-def rip_id3(session, track): # write ID3 data
+def rip_id3(session, track, basedir): # write ID3 data
     num_track = "%02d" % (track.index(),)
     mp3file = track.name()+".mp3"
     artist = track.artists()[0].name()
     album = track.album().name()
     title = track.name()
     year = track.album().year()
-    directory = os.getcwd() + "/" + track.artists()[0].name() + "/" + track.album().name() + "/"
+    directory = basedir + "/" + track.artists()[0].name() + "/" + track.album().name() + "/"
 
     # download cover
     image = session.image_create(track.album().cover())
@@ -87,6 +93,11 @@ class RipperThread(threading.Thread):
         container_loaded.wait()
         container_loaded.clear()
 
+        # base dir
+        basedir = os.getcwd()
+        if len(sys.argv) >= 5:
+            basedir = sys.argv[4]
+
         # create track iterator
         link = Link.from_string(sys.argv[3])
         if link.type() == Link.LINK_TRACK:
@@ -106,7 +117,10 @@ class RipperThread(threading.Thread):
             
                 self.ripper.load_track(track)
 
-                rip_init(session, track)
+                if already_ripped(track, basedir):
+                        continue
+
+                rip_init(session, track, basedir)
 
                 self.ripper.play()
 
@@ -114,7 +128,7 @@ class RipperThread(threading.Thread):
                 end_of_track.clear() # TODO check if necessary
 
                 rip_terminate(session, track)
-                rip_id3(session, track)
+                rip_id3(session, track, basedir)
 
         self.ripper.disconnect()
 
@@ -137,12 +151,13 @@ class Ripper(Jukebox):
 
 
 if __name__ == '__main__':
-	if len(sys.argv) >= 3:
+	if len(sys.argv) >= 4:
 		ripper = Ripper(sys.argv[1],sys.argv[2]) # login
 		ripper.connect()
 	else:
 		print "usage : \n"
-		print "	  ./jbripper.py [username] [password] [spotify_url]"
+		print "	  ./jbripper.py <username> <password> <spotify_url> [output_dir]"
 		print "example : \n"
 	 	print "   ./jbripper.py user pass spotify:track:52xaypL0Kjzk0ngwv3oBPR - for a single file"
 		print "   ./jbripper.py user pass spotify:user:username:playlist:4vkGNcsS8lRXj4q945NIA4 - rips entire playlist"
+
