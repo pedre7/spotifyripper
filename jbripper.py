@@ -31,6 +31,7 @@ def escape_filename_part(part):
     part = re.sub(r"\s*/\s*", r' & ', part)
     part = re.sub(r"""\s*[\\/:"*?<>|]+\s*""", r' ', part)
     part = part.strip()
+    part = re.sub(r"(^\.+\s*|(?<=\.)\.+|\s*\.+$)", r' ', part)
     return part
 
 def rip_init(session, track, outputdir):
@@ -91,8 +92,11 @@ def rip_id3(session, track, outputdir): # write ID3 data
     fh_cover.write(image.data())
     fh_cover.close()
 
-    # write id3 data
-    call(["eyeD3", "--add-image", "cover.jpg:FRONT_COVER", "-t", title, "-a", artist, "-A", album, "-n", str(num_track), "-Y", str(year), "-Q", directory + mp3file])
+    # write ID3 data
+    if args.oldtags:
+        call(["eyeD3", "--to-v2.3", "--add-image", "cover.jpg:FRONT_COVER", "-t", title, "-a", artist, "-A", album, "-n", str(num_track), "-Y", str(year), "-Q", directory + mp3file])
+    else:
+        call(["eyeD3", "--add-image", "cover.jpg:FRONT_COVER", "-t", title, "-a", artist, "-A", album, "-n", str(num_track), "-Y", str(year), "-Q", directory + mp3file])
     print directory + mp3file + " written"
     # delete cover
     call(["rm", "-f", "cover.jpg"])
@@ -248,6 +252,7 @@ if __name__ == '__main__':
     parser.add_argument('-P', '--playback', action="store_true", help='set if you want to listen to the tracks that are currently ripped (start with "padsp ./jbripper.py ..." if using pulse audio)')
     parser.add_argument('-V', '--vbr', default="0", help='Lame VBR quality setting. Equivalent to Lame -V parameter. Default 0')
     parser.add_argument('-I', '--ignoreerrors', default=False, action="store_true", help='Ignore encountered errors by skipping to next track in playlist')
+    parser.add_argument('-o', '--oldtags', default=False, action="store_true", help='set to write ID3v2 tags version 2.3.0 instead of newer version 2.4.0')
     group = parser.add_mutually_exclusive_group(required=False)
     group.add_argument('-f', '--file', default=True, action="store_true", help='Save output mp3 file with the following format: "Artist - Song - [ Album ].mp3" (default)')
     group.add_argument('-d', '--directory', default=False, action="store_true", help='Save output mp3 to a directory with the following format: "Artist/Album/Song.mp3"')

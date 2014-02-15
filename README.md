@@ -26,6 +26,7 @@ Usage:
       -P, --playback        set if you want to listen to the tracks that are currently ripped (start with "padsp ./jbripper.py ..." if using pulse audio)
       -V VBR, --vbr VBR     Lame VBR quality setting. Equivalent to Lame -V parameter. Default 0
       -I, --ignoreerrors    Ignore encountered errors by skipping to next track in playlist
+      -o, --oldtags         set to write ID3v2 tags version 2.3.0 instead of newer version 2.4.0
       -f, --file            Save output mp3 file with the following format: "Artist - Song - [ Album ].mp3" (default)
       -d, --directory       Save output mp3 to a directory with the following format: "Artist/Album/Song.mp3"
     
