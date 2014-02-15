@@ -30,6 +30,7 @@ def printstr(str): # print without newline
 def escape_filename_part(part):
     part = re.sub(r"\s*/\s*", r' & ', part)
     part = re.sub(r"""\s*[\\/:"*?<>|]+\s*""", r' ', part)
+    part = part.strip()
     return part
 
 def rip_init(session, track, outputdir):
