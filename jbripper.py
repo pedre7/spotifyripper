@@ -35,7 +35,7 @@ def escape_filename_part(part):
     part = re.sub(r"\s*/\s*", r' & ', part)
     part = re.sub(r"""\s*[\\/:"*?<>|]+\s*""", r' ', part)
     part = part.strip()
-    part = re.sub(r"(^\.+\s*|(?<=\.)\.+|\s*\.+$)", r' ', part)
+    part = re.sub(r"(^\.+\s*|(?<=\.)\.+|\s*\.+$)", r'', part)
     return part
 
 
