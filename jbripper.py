@@ -116,13 +116,7 @@ def rip_id3(session, track, outputdir): # write ID3 data
     call(["rm", "-f", "cover.jpg"])
 
 
-
-
-
-
-
 def library_scan(path):
-
     print("Scanning " + path)
     count = 0
     tree = lambda: collections.defaultdict(tree)
@@ -154,23 +148,18 @@ def library_scan(path):
     print(str(count) + " mp3 files found")
     return musiclibrary
 
-def library_track_exists(track):
-    if musiclibrary == None:
-        return False
 
+def library_track_exists(track, outputdir):
     artist = artist = ', '.join(a.name() for a in track.artists())
     album = track.album().name()
     title = track.name()
+    filepathfrominfo = create_filepath(outputdir, artist, album, title)
 
-    filepath = musiclibrary[artist][album][title]
-    if filepath == {}:
-        return False
-    else:
-        print("Skipping. Track found at " + filepath)
-        return True
+    return (musiclibrary is not None and musiclibrary[artist][album][title]) or (os.path.exists(filepathfrominfo) and filepathfrominfo)
 
 
 class RipperThread(threading.Thread):
+
     def __init__(self, ripper):
         threading.Thread.__init__(self)
         self.ripper = ripper
@@ -211,8 +200,10 @@ class RipperThread(threading.Thread):
                     print('Skipping. Track not available')
                 else:
                     #self.ripper.load_track(track)
-
-                    if not library_track_exists(track):
+                    exists = library_track_exists(track, outputdir)
+                    if exists:
+                        print("Skipping. Track found at " + exists)
+                    else:
                         try:
                             rip_init(session, track, outputdir)
 
