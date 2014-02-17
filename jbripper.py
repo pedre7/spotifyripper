@@ -21,6 +21,7 @@ import collections
 pipe = None
 ripping = False
 end_of_track = threading.Event()
+interrupt = threading.Event()
 
 musiclibrary = None
 args = None
@@ -79,6 +80,14 @@ def rip_terminate(session, track):
         pipe.close()
     ripping = False
 
+def rip_delete(track, outputdir):
+    artist = artist = ', '.join(a.name() for a in track.artists())
+    album = track.album().name()
+    title = track.name()
+    filepath = create_filepath(outputdir, artist, album, title)
+    time.sleep(1)
+    print("Deleting partially ripped file at " + filepath)
+    call(["rm", "-f", filepath])
 
 def rip(session, frames, frame_size, num_frames, sample_type, sample_rate, channels):
     if ripping:
@@ -194,6 +203,8 @@ class RipperThread(threading.Thread):
                 count += 1
                 # if the track is not loaded, track.availability is not ready
                 self.ripper.load_track(track)
+                if interrupt.isSet():
+                    break
                 while not track.is_loaded():
                     time.sleep(0.1)
                 if track.availability() != 1:
@@ -213,6 +224,9 @@ class RipperThread(threading.Thread):
                             end_of_track.clear() # TODO check if necessary
 
                             rip_terminate(session, track)
+                            if interrupt.isSet():
+                                rip_delete(track, outputdir)
+                                break
                             rip_id3(session, track, outputdir)
                         except (KeyboardInterrupt, SystemExit):
                             raise
@@ -243,6 +257,11 @@ class Ripper(Jukebox):
 
     def end_of_track(self, session):
         Jukebox.end_of_track(self, session)
+        end_of_track.set()
+
+    def abort_play(self):
+        interrupt.set()
+        self.stop()
         end_of_track.set()
 
 
@@ -277,4 +296,9 @@ if __name__ == '__main__':
         tree = lambda: collections.defaultdict(tree)
         musiclibrary = tree()
     ripper = Ripper(args.user[0], args.password[0]) # login
-    ripper.connect()
+    try:
+        ripper.connect()
+    except KeyboardInterrupt:
+        print("")
+        print("Aborting (KeyboardInterrupt)")
+        ripper.abort_play()
