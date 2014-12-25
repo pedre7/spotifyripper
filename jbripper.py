@@ -202,7 +202,7 @@ class RipperThread(threading.Thread):
         if link.type() == Link.LINK_TRACK:
             track = link.as_track()
             itrack = iter([track])
-        elif link.type() == Link.LINK_PLAYLIST:
+        elif link.type() == Link.LINK_PLAYLIST or link.type() == Link.LINK_STARRED:
             playlist = link.as_playlist()
             print('loading playlist ...')
             while not playlist.is_loaded():
