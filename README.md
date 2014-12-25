@@ -45,7 +45,7 @@ features:
 
 prerequisites:
 ---------------
-
+- Python 2 (if P3 is also install change env to python2 and use pip2)
 - libspotify (download at https://developer.spotify.com/technologies/libspotify/)
 - pyspotify (sudo pip install -U pyspotify)
 - spotify appkey (download at developer.spotify.com, requires Spotify Premium)
@@ -56,4 +56,4 @@ prerequisites:
 TODO:
 ------
 - [ ] detect if other spotify instance is interrupting
-- [ ] add album supprt : spotify:album:1UnRYaeCev9JVKEHWBEgHe
+

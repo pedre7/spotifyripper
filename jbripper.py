@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 from subprocess import call, Popen, PIPE
-from spotify import Link, Image
+from spotify import Link, Image, AlbumBrowser, ArtistBrowser
 from jukebox import Jukebox, container_loaded
 import os
 import sys
@@ -108,18 +108,30 @@ def rip_id3(session, track, outputdir): # write ID3 data
     musiclibrary[artist][album][title] = filepath
 
     # download cover
-    image = session.image_create(track.album().cover())
-    while not image.is_loaded(): # does not work from MainThread!
-        time.sleep(0.1)
-    fh_cover = open('cover.jpg', 'wb')
-    fh_cover.write(image.data())
-    fh_cover.close()
+    coverFound = False
+    cover = track.album().cover()
+    if cover is not None:
+        image = session.image_create(cover)
+        if image is not None:
+            while not image.is_loaded(): # does not work from MainThread!
+                time.sleep(0.1)
+            fh_cover = open('cover.jpg','wb')
+            fh_cover.write(image.data())
+            fh_cover.close()
+            coverFound = True
 
     # write ID3 data
-    if args.oldtags:
-        call(["eyeD3", "--to-v2.3", "--add-image", "cover.jpg:FRONT_COVER", "-t", title, "-a", artist, "-A", album, "-n", str(num_track), "-Y", str(year), "-Q", filepath])
+    if coverFound:
+        if args.oldtags:
+            call(["eyeD3", "--to-v2.3", "--add-image", "cover.jpg:FRONT_COVER", "-t", title, "-a", artist, "-A", album, "-n", str(num_track), "-Y", str(year), "-Q", filepath])
+        else:
+            call(["eyeD3", "--add-image", "cover.jpg:FRONT_COVER", "-t", title, "-a", artist, "-A", album, "-n", str(num_track), "-Y", str(year), "-Q", filepath])
     else:
-        call(["eyeD3", "--add-image", "cover.jpg:FRONT_COVER", "-t", title, "-a", artist, "-A", album, "-n", str(num_track), "-Y", str(year), "-Q", filepath])
+        if args.oldtags:
+            call(["eyeD3", "--to-v2.3", "-t", title, "-a", artist, "-A", album, "-n", str(num_track), "-Y", str(year), "-Q", filepath])
+        else:
+            call(["eyeD3", "-t", title, "-a", artist, "-A", album, "-n", str(num_track), "-Y", str(year), "-Q", filepath])      
+      
     print(filepath + " written")
     # delete cover
     call(["rm", "-f", "cover.jpg"])
@@ -183,21 +195,40 @@ class RipperThread(threading.Thread):
         if args.outputdir != None:
             outputdir = os.path.normpath(os.path.realpath(args.outputdir[0]))
 
+        session = self.ripper.session
+
         # create track iterator
         link = Link.from_string(args.url[0])
         if link.type() == Link.LINK_TRACK:
             track = link.as_track()
             itrack = iter([track])
-        elif link.type() == Link.LINK_PLAYLIST:
+        elif link.type() == Link.LINK_PLAYLIST or link.type() == Link.LINK_STARRED:
             playlist = link.as_playlist()
             print('loading playlist ...')
             while not playlist.is_loaded():
-                time.sleep(0.1)
+                print(' pending playlist ')
+                time.sleep(0.5)
             print('done')
             itrack = iter(playlist)
+        elif link.type() == Link.LINK_ALBUM:
+            album = AlbumBrowser(link.as_album())
+            print('loading album ...')            
+            while not album.is_loaded():
+                print(' pending album ')
+                time.sleep(0.5)
+            print('done')
+            itrack = iter(album)
+        elif link.type() == Link.LINK_ARTIST:
+            artist = ArtistBrowser(link.as_artist())
+            print('loading artist')
+            while not artist.is_loaded():
+                print(' pending artist ')
+                time.sleep(0.5)
+            print('done')
+            itrack = iter(artist)
+                  
 
         # ripping loop
-        session = self.ripper.session
         count = 0
         for track in itrack:
                 count += 1
@@ -245,7 +276,7 @@ class Ripper(Jukebox):
     def __init__(self, *a, **kw):
         Jukebox.__init__(self, *a, **kw)
         self.ui = RipperThread(self) # replace JukeboxUI
-        self.session.set_preferred_bitrate(2) # 320 bps
+        self.session.set_preferred_bitrate(1) # 320 bps
 
     def music_delivery_safe(self, session, frames, frame_size, num_frames, sample_type, sample_rate, channels):
         rip(session, frames, frame_size, num_frames, sample_type, sample_rate, channels)
