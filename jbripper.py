@@ -233,7 +233,10 @@ class RipperThread(threading.Thread):
         for track in itrack:
                 count += 1
                 # if the track is not loaded, track.availability is not ready
-                self.ripper.load_track(track)
+                try:
+                    self.ripper.load_track(track)
+                except:
+                    print "Ignoring exception here (track not available to play?)"
                 if interrupt.isSet():
                     break
                 while not track.is_loaded():
